@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xeno Manifold - 3D Geometry Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+        #container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #header {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        #header h1 {
+            margin: 0 0 10px 0;
+            font-size: 32px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        #header p {
+            margin: 5px 0;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+        canvas {
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 0;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            font-size: 12px;
+            max-width: 280px;
+            transition: all 0.3s ease;
+        }
+        #controls.collapsed {
+            max-width: 50px;
+        }
+        #controls.collapsed .controls-content {
+            display: none;
+        }
+        .controls-header {
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #controls.collapsed .controls-header {
+            border-bottom: none;
+            justify-content: center;
+        }
+        .controls-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        .controls-header .toggle-icon {
+            font-size: 20px;
+            transition: transform 0.3s;
+        }
+        #controls.collapsed .controls-header h3 {
+            display: none;
+        }
+        .controls-content {
+            padding: 15px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        .controls-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .controls-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+        .controls-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+        .controls-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #controls label {
+            display: block;
+            margin: 10px 0 5px 0;
+        }
+        #controls input[type="range"] {
+            width: 100%;
+        }
+        #controls button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            background: #667eea;
+            border: none;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #controls button:hover {
+            background: #764ba2;
+        }
+        #file-input {
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .control-item {
+            margin-bottom: 15px;
+        }
+        #drop-zone {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px dashed #667eea;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(10px);
+        }
+        #drop-zone.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        #drop-zone h2 {
+            margin: 0 0 10px 0;
+            font-size: 48px;
+        }
+        .file-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .file-label:hover {
+            background: #764ba2;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <h1>🛸 XENO MANIFOLD GEOMETRY VIEWER</h1>
+            <p>3D visualization of multi-dimensional language structures</p>
+            <p id="info">Load an OBJ file to begin</p>
+        </div>
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+            <div id="drop-zone">
+                <h2>📦</h2>
+                <p>Drop OBJ file here</p>
+                <p style="font-size: 14px; opacity: 0.7;">or use the file picker below</p>
+            </div>
+            <div id="controls">
+                <div class="controls-header">
+                    <h3>⚙️ Controls</h3>
+                    <span class="toggle-icon">◀</span>
+                </div>
+                <div class="controls-content">
+                    <div class="control-item">
+                        <label for="file-input" class="file-label">
+                            📂 Choose OBJ File
+                        </label>
+                        <input type="file" id="file-input" accept=".obj" style="display: none;">
+                        <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">or drag & drop onto canvas</p>
+                    </div>
+                    
+                    <div class="control-item">
+                        <button id="toggle-mode" style="background: #764ba2;">🔄 Mode: Rotate</button>
+                        <p style="font-size: 11px; margin-top: 5px; opacity: 0.7;">Click to switch between rotate/pan</p>
+                    </div>
+                
+                <div class="control-item">
+                    <label>Line Width: <span id="line-width-val">3</span></label>
+                    <input type="range" id="line-width" min="1" max="10" value="3" step="0.5">
+                </div>
+                
+                <div class="control-item">
+                    <label>Point Size: <span id="point-size-val">8</span></label>
+                    <input type="range" id="point-size" min="2" max="20" value="8" step="1">
+                </div>
+                
+                <div class="control-item">
+                    <label>Rotation Speed: <span id="speed-val">0.5</span></label>
+                    <input type="range" id="speed" min="0" max="2" value="0.5" step="0.1">
+                </div>
+                
+                <div class="control-item">
+                    <label>Zoom: <span id="zoom-val">150</span></label>
+                    <input type="range" id="zoom-slider" min="50" max="500" value="150" step="10">
+                </div>
+                
+                <div class="control-item">
+                    <label>Scale: <span id="scale-val">100</span></label>
+                    <input type="range" id="scale-slider" min="20" max="200" value="100" step="5">
+                </div>
+                
+                <div class="control-item">
+                    <label>Offset X: <span id="offset-x-val">0</span></label>
+                    <input type="range" id="offset-x-slider" min="-500" max="500" value="0" step="10">
+                </div>
+                
+                    <div class="control-item">
+                        <label>Offset Y: <span id="offset-y-val">0</span></label>
+                        <input type="range" id="offset-y-slider" min="-500" max="500" value="0" step="10">
+                    </div>
+                    
+                    <button id="toggle-rotation">⏸ Pause Auto-Rotation</button>
+                    <button id="reset-view">↺ Reset View</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let vertices = [];
+        let lines = [];
+        let rotation = { x: 0.3, y: 0.3 };
+        let zoom = 150;
+        let scale = 100;
+        let offsetX = 0;
+        let offsetY = 0;
+        let autoRotate = true;
+        let rotationSpeed = 0.005;
+        let isDragging = false;
+        let isPanMode = false;
+        let lastMouse = { x: 0, y: 0 };
+        let lineWidth = 3;
+        let pointSize = 8;
+        let lastFrameTime = performance.now();
+        let fps = 60;
+
+        // Resize canvas
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Sample embedded geometry for immediate viewing
+        const sampleOBJ = `# Xeno Manifold 3D Geometry
+# Sample - Load your own OBJ file below
+o sample
+v 0.6 0.8 0.3
+v -0.5 1.0 0.4
+v 0.2 -0.9 -0.4
+v -0.2 1.0 0.4
+v -0.2 -0.7 -0.4
+v -0.4 0.6 0.3
+v -0.8 0.4 0.2
+v -0.5 0.8 0.4
+l 1 2
+l 2 3
+l 3 4
+l 4 5
+l 5 6
+l 6 7
+l 7 8
+l 8 1`;
+        
+        // Don't load sample - start with blank canvas
+        // parseOBJ(sampleOBJ);
+
+        // Parse OBJ file
+        function parseOBJ(objText) {
+            vertices = [];
+            lines = [];
+            
+            const linesArr = objText.split('\n');
+            let currentOffset = 0;
+            let objectName = '';
+            
+            linesArr.forEach(line => {
+                line = line.trim();
+                
+                if (line.startsWith('o ')) {
+                    objectName = line.substring(2);
+                } else if (line.startsWith('v ')) {
+                    const parts = line.split(/\s+/);
+                    vertices.push({
+                        x: parseFloat(parts[1]),
+                        y: parseFloat(parts[2]),
+                        z: parseFloat(parts[3]),
+                        name: objectName
+                    });
+                } else if (line.startsWith('l ')) {
+                    const parts = line.split(/\s+/);
+                    lines.push({
+                        start: parseInt(parts[1]) - 1 + currentOffset,
+                        end: parseInt(parts[2]) - 1 + currentOffset
+                    });
+                }
+            });
+            
+            console.log('Parsed:', vertices.length, 'vertices,', lines.length, 'lines');
+            console.log('Vertices:', vertices);
+            console.log('Lines:', lines);
+        }
+
+        // 3D rotation
+        function rotatePoint(p, rx, ry) {
+            // Rotate around Y
+            let x = p.x * Math.cos(ry) - p.z * Math.sin(ry);
+            let z = p.x * Math.sin(ry) + p.z * Math.cos(ry);
+            
+            // Rotate around X
+            let y = p.y * Math.cos(rx) - z * Math.sin(rx);
+            z = p.y * Math.sin(rx) + z * Math.cos(rx);
+            
+            return { x, y, z };
+        }
+
+        // Project to 2D
+        function project(p) {
+            const zOffset = Math.max(-zoom * 0.9, Math.min(zoom * 2, p.z * 100)); // Clamp z to prevent extreme values
+            const depthScale = zoom / (zoom + zOffset);
+            return {
+                x: canvas.width / 2 + p.x * depthScale * scale + offsetX,
+                y: canvas.height / 2 - p.y * depthScale * scale + offsetY,
+                scale: depthScale
+            };
+        }
+
+        // Draw
+        function draw(timestamp = performance.now()) {
+            // Calculate FPS (with safety check)
+            const deltaTime = Math.min(1000, timestamp - lastFrameTime); // Cap at 1 second to prevent issues
+            if (deltaTime > 0) {
+                lastFrameTime = timestamp;
+                fps = Math.round(1000 / deltaTime);
+            }
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (vertices.length === 0) {
+                // Draw placeholder text when no geometry is loaded
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.font = '24px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('No geometry loaded', canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = '16px -apple-system, BlinkMacSystemFont, sans-serif';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.fillText('Choose an OBJ file or drag & drop', canvas.width / 2, canvas.height / 2 + 20);
+                requestAnimationFrame(draw);
+                return;
+            }
+
+            // Auto rotate (frame-rate independent)
+            if (autoRotate && deltaTime < 100) { // Only rotate if frame time is reasonable
+                rotation.y += rotationSpeed * (deltaTime / 16.67); // Normalize to 60fps
+            }
+
+            // Transform vertices
+            const transformed = vertices.map(v => {
+                const rotated = rotatePoint(v, rotation.x, rotation.y);
+                return { ...rotated, ...project(rotated) };
+            });
+
+            // Performance optimization: reduce rendering quality for complex geometry
+            const isComplex = vertices.length > 50;
+            const renderStep = isComplex ? 2 : 1;
+            
+            // Draw lines
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            
+            for (let i = 0; i < lines.length; i += renderStep) {
+                const line = lines[i];
+                const start = transformed[line.start];
+                const end = transformed[line.end];
+                
+                // Gradient based on depth
+                const gradient = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
+                gradient.addColorStop(0, `rgba(102, 126, 234, ${0.5 + start.scale * 0.5})`);
+                gradient.addColorStop(1, `rgba(118, 75, 162, ${0.5 + end.scale * 0.5})`);
+                
+                ctx.strokeStyle = gradient;
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+                ctx.stroke();
+            }
+
+            // Draw vertices
+            for (let i = 0; i < transformed.length; i += renderStep) {
+                const v = transformed[i];
+                const alpha = 0.3 + v.scale * 0.7;
+                const size = pointSize * v.scale;
+                
+                // Outer glow (skip for complex geometry to improve performance)
+                if (!isComplex) {
+                    const gradient = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, size * 2);
+                    gradient.addColorStop(0, `rgba(102, 126, 234, ${alpha})`);
+                    gradient.addColorStop(1, 'rgba(102, 126, 234, 0)');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(v.x, v.y, size * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Core
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                ctx.beginPath();
+                ctx.arc(v.x, v.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            requestAnimationFrame(draw);
+        }
+
+        // Mouse controls
+        canvas.addEventListener('mousedown', e => {
+            isDragging = true;
+            lastMouse = { x: e.clientX, y: e.clientY };
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (isDragging) {
+                const dx = e.clientX - lastMouse.x;
+                const dy = e.clientY - lastMouse.y;
+                
+                if (isPanMode) {
+                    // Pan (move the geometry)
+                    offsetX += dx;
+                    offsetY += dy;
+                    document.getElementById('offset-x-slider').value = offsetX;
+                    document.getElementById('offset-x-val').textContent = Math.round(offsetX);
+                    document.getElementById('offset-y-slider').value = offsetY;
+                    document.getElementById('offset-y-val').textContent = Math.round(offsetY);
+                } else {
+                    // Rotate
+                    rotation.y += dx * 0.005;
+                    rotation.x += dy * 0.005;
+                }
+                
+                lastMouse = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        canvas.addEventListener('wheel', e => {
+            e.preventDefault();
+            zoom += e.deltaY * -0.5;
+            zoom = Math.max(50, Math.min(500, zoom));
+        });
+
+        // Controls
+        document.getElementById('line-width').addEventListener('input', e => {
+            lineWidth = parseFloat(e.target.value);
+            document.getElementById('line-width-val').textContent = lineWidth;
+        });
+        
+        document.getElementById('zoom-slider').addEventListener('input', e => {
+            zoom = parseFloat(e.target.value);
+            document.getElementById('zoom-val').textContent = zoom;
+        });
+        
+        document.getElementById('scale-slider').addEventListener('input', e => {
+            scale = parseFloat(e.target.value);
+            document.getElementById('scale-val').textContent = scale;
+        });
+        
+        document.getElementById('offset-x-slider').addEventListener('input', e => {
+            offsetX = parseFloat(e.target.value);
+            document.getElementById('offset-x-val').textContent = offsetX;
+        });
+        
+        document.getElementById('offset-y-slider').addEventListener('input', e => {
+            offsetY = parseFloat(e.target.value);
+            document.getElementById('offset-y-val').textContent = offsetY;
+        });
+
+        document.getElementById('point-size').addEventListener('input', e => {
+            pointSize = parseFloat(e.target.value);
+            document.getElementById('point-size-val').textContent = pointSize;
+        });
+
+        document.getElementById('speed').addEventListener('input', e => {
+            rotationSpeed = parseFloat(e.target.value) * 0.01;
+            document.getElementById('speed-val').textContent = e.target.value;
+        });
+
+        // Toggle controls visibility
+        document.querySelector('.controls-header').addEventListener('click', () => {
+            const controls = document.getElementById('controls');
+            const icon = document.querySelector('.toggle-icon');
+            controls.classList.toggle('collapsed');
+            icon.textContent = controls.classList.contains('collapsed') ? '▶' : '◀';
+        });
+        
+        // Toggle between rotate and pan mode
+        document.getElementById('toggle-mode').addEventListener('click', e => {
+            isPanMode = !isPanMode;
+            e.target.textContent = isPanMode ? '✋ Mode: Pan' : '🔄 Mode: Rotate';
+            e.target.style.background = isPanMode ? '#e67e22' : '#764ba2';
+            canvas.style.cursor = isPanMode ? 'move' : 'grab';
+        });
+        
+        document.getElementById('toggle-rotation').addEventListener('click', e => {
+            autoRotate = !autoRotate;
+            e.target.textContent = autoRotate ? '⏸ Pause Auto-Rotation' : '▶️ Resume Auto-Rotation';
+        });
+
+        document.getElementById('reset-view').addEventListener('click', () => {
+            rotation = { x: 0.3, y: 0.3 };
+            zoom = 150;
+            scale = 100;
+            offsetX = 0;
+            offsetY = 0;
+            rotationSpeed = 0.003;
+            lineWidth = 2.5;
+            pointSize = 4;
+            
+            // Update all slider values and displays
+            document.getElementById('zoom-slider').value = zoom;
+            document.getElementById('zoom-val').textContent = zoom;
+            document.getElementById('scale-slider').value = scale;
+            document.getElementById('scale-val').textContent = scale;
+            document.getElementById('offset-x-slider').value = offsetX;
+            document.getElementById('offset-x-val').textContent = offsetX;
+            document.getElementById('offset-y-slider').value = offsetY;
+            document.getElementById('offset-y-val').textContent = offsetY;
+            document.getElementById('rotation-speed').value = rotationSpeed;
+            document.getElementById('rotation-speed-val').textContent = rotationSpeed.toFixed(3);
+            document.getElementById('line-width').value = lineWidth;
+            document.getElementById('line-width-val').textContent = lineWidth;
+            document.getElementById('point-size').value = pointSize;
+            document.getElementById('point-size-val').textContent = pointSize;
+        });
+
+        // File input handler
+        function loadFile(file) {
+            if (file && file.name.endsWith('.obj')) {
+                document.getElementById('info').textContent = `Loading ${file.name}...`;
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    parseOBJ(evt.target.result);
+                    setTimeout(() => {
+                        document.getElementById('info').textContent = 
+                            `✅ Loaded: ${file.name} - ${vertices.length} vertices, ${lines.length} lines`;
+                        // Flash the canvas to show something loaded
+                        canvas.style.opacity = '0.5';
+                        setTimeout(() => { canvas.style.opacity = '1'; }, 100);
+                    }, 100);
+                };
+                reader.readAsText(file);
+            } else if (file) {
+                alert('Please select a .obj file');
+            }
+        }
+
+        const fileInput = document.getElementById('file-input');
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length > 0) {
+                loadFile(e.target.files[0]);
+            }
+            // Reset the input so the same file can be loaded again
+            e.target.value = '';
+        });
+
+        // Drag and drop
+        const dropZone = document.getElementById('drop-zone');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        canvasContainer.addEventListener('dragenter', e => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        });
+
+        canvasContainer.addEventListener('dragover', e => {
+            e.preventDefault();
+        });
+
+        canvasContainer.addEventListener('dragleave', e => {
+            if (e.target === canvasContainer) {
+                dropZone.classList.remove('active');
+            }
+        });
+
+        canvasContainer.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            loadFile(e.dataTransfer.files[0]);
+        });
+
+        // Click on file label (prevent double triggering)
+        document.querySelector('.file-label').addEventListener('click', (e) => {
+            // The input is inside the label, so it will trigger automatically
+            // No need to manually click it
+        });
+
+        // Start animation
+        draw();
+    </script>
+</body>
+</html>
