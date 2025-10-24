@@ -22,7 +22,7 @@ The Xeno language is based on **Manifold Linguistics** - a theoretical framework
 
 ### Core Principles
 
-1. **Deterministic Generation**: Uses cryptographic hashing (FNV-1a) to ensure each human word maps consistently to the same alien representation. This creates a stable, learnable vocabulary rather than random generation.
+1. **Deterministic Generation**: Uses cryptographic hashing (FNV-1a) to ensure each human word maps consistently to the same representation. This creates a stable, learnable vocabulary rather than random generation.
 
 2. **Phonotactic Structure**: The phonetic system avoids human language patterns:
    - **No natural language phonemes**: Uses digraphs (zh, kh, xh) instead of single consonants
