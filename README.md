@@ -1,6 +1,6 @@
 # 🛸 Xeno Manifold Language Generator
 
-A multi-dimensional, multimodal alien language generator that transforms human text into a complete alien communication system with visual glyphs, phonetic sounds, 3D geometry, colors, motion, and synthesized audio.
+A multi-dimensional, multimodal language generator that transforms human text into a complete alien communication system with visual glyphs, phonetic sounds, 3D geometry, colors, motion, and synthesized audio.
 
 ## 🌟 Overview
 
